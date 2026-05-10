@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>群内双色球统计与战报生成</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">本地 Excel 工具</p>
+          <h1>群内双色球统计与战报生成</h1>
+        </div>
+        <div class="status-pill" id="status">等待输入</div>
+      </header>
+
+      <section class="workspace">
+        <div class="panel input-panel">
+          <label>
+            历史 Excel
+            <input id="workbookFile" type="file" accept=".xlsx,.xls" />
+          </label>
+
+          <div class="grid-two">
+            <label>
+              日期
+              <input id="drawDate" type="date" />
+            </label>
+            <label>
+              期次（由日期生成）
+              <input id="issue" type="text" placeholder="选择日期后自动生成" readonly />
+            </label>
+          </div>
+
+          <label>
+            玩法
+            <select id="playType">
+              <option value="ordinary">普通日玩法</option>
+              <option value="fridayJackpot">大乐透玩法</option>
+            </select>
+          </label>
+
+          <label>
+            当前奖池补充值（旧数据迁移）
+            <input id="poolAdjustment" type="number" step="0.01" placeholder="为空则按 0 处理" />
+          </label>
+
+          <div class="grid-two">
+            <label>
+              红球开奖号码
+              <input id="redBalls" type="text" placeholder="01 02 03 04 05 06" />
+            </label>
+            <label>
+              蓝球开奖号码
+              <input id="blueBall" type="text" placeholder="07" />
+            </label>
+          </div>
+          <div class="button-row number-actions">
+            <button id="randomNumbersButton" type="button">随机生成开奖号码</button>
+          </div>
+
+          <label>
+            今日投注记录
+            <textarea id="bettingText" rows="12" placeholder="每行：昵称 红球1 红球2 红球3 红球4 红球5 红球6 蓝球"></textarea>
+          </label>
+
+          <div id="duplicatePanel" class="duplicate-panel hidden">
+            <p id="duplicateMessage"></p>
+            <div class="button-row">
+              <button type="button" data-duplicate="overwrite">覆盖</button>
+              <button type="button" data-duplicate="skip">跳过</button>
+              <button type="button" data-duplicate="newIssue">生成新期次</button>
+            </div>
+          </div>
+
+          <div class="button-row">
+            <button id="generateButton" type="button">生成结果</button>
+            <button id="downloadButton" type="button" disabled>下载 Excel</button>
+            <button id="copyButton" type="button" disabled>复制战报</button>
+          </div>
+        </div>
+
+        <div class="panel result-panel">
+          <div id="validationView" class="validation-view"></div>
+          <div id="summaryView" class="summary-view"></div>
+          <label>
+            今日战报
+            <textarea id="reportText" rows="18" readonly></textarea>
+          </label>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/app.js"></script>
+  </body>
+</html>

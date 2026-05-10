@@ -1,0 +1,21 @@
+# 默认只上传明确放行的项目文件，避免本地工具、生成物和临时文件误入仓库。
+/*
+
+# 项目入口与文档
+!/.gitignore
+!/AGENTS.md
+!/README.md
+!/rules.md
+!/index.html
+!/package.json
+!/package-lock.json
+!/vitest.config.js
+
+# 源码、测试、脚本与规格文档
+!/src/
+!/tests/
+!/scripts/
+!/specs/
+
+# 指定保留的输入 Excel 示例
+!/双色球战报-2026-05-12-20260512.xlsx
