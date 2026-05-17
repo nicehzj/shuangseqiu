@@ -30,6 +30,22 @@ describe('updatePrizePool', () => {
     expect(pool.closingBalance).toBe(104);
   });
 
+  it('returns prize tax to the pool as rollover', () => {
+    const pool = updatePrizePool({
+      date: '2026-05-10',
+      issue: '001',
+      openingBalance: 100,
+      betCount: 1,
+      incomeOverride: 2,
+      playType: 'ordinary',
+      results: [{ prizeAmount: 66, prizeLevel: 'first' }],
+      taxRevenue: 5
+    });
+
+    expect(pool).toMatchObject({ income: 2, payout: 66, rollover: 5, closingBalance: 41, valid: true });
+    expect(pool.notes).toContain('中奖税 5 Hao币回流奖池');
+  });
+
   it('does not add ordinary-day no-winner notes', () => {
     const pool = updatePrizePool({
       date: '2026-05-10',

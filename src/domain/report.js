@@ -2,6 +2,7 @@ import { getRuleSet } from './rules.js';
 import { summarizePrizes } from './calculator.js';
 import { formatBallNumber, formatBallNumbers } from './rules.js';
 import { formatRedistributionReport } from './redistribution.js';
+import { formatPrizeTaxReport } from './prize-tax.js';
 
 const PRIZE_DISPLAY_ORDER = ['first', 'second', 'third', 'fourth', 'fifth'];
 
@@ -26,7 +27,8 @@ export function generateBattleReport({
   poolRecord,
   rankings,
   duplicateDecision,
-  redistribution
+  redistribution,
+  taxSummary
 }) {
   const ruleSet = getRuleSet(playType);
   const winners = results
@@ -50,6 +52,10 @@ export function generateBattleReport({
   if (invalidRecords.length) {
     notices.push(`无效投注 ${invalidRecords.length} 注：${invalidRecords.map((record) => `${record.nickname}（${(record.invalidReasons ?? []).join('、')}）`).join('；')}`);
   }
+  const taxText = formatPrizeTaxReport(taxSummary);
+  if (taxText) {
+    notices.push(taxText);
+  }
 
   const sections = [
     `🎯【今日战报】${date}${issue ? ` 第${issue}期` : ''}`,
@@ -59,7 +65,7 @@ export function generateBattleReport({
     `🧾 投注总数：${records.length}`,
     `🏆 中奖名单：${winnerText}`,
     `📊 奖项统计：${prizeSummaryText}`,
-    `💰 今日奖池变化：+${poolRecord.income} -${poolRecord.payout} Hao币，当前余额 ${poolRecord.closingBalance} Hao币`,
+    `💰 今日奖池变化：+${poolRecord.income}${poolRecord.rollover ? ` +${poolRecord.rollover}` : ''} -${poolRecord.payout} Hao币，当前余额 ${poolRecord.closingBalance} Hao币`,
     `📈 历史排行榜变化：${formatRankingChanges(rankings.historical ?? [])}`,
     `🗓️ 月度排行榜变化：${formatRankingChanges(rankings.monthly ?? [])}`,
     `💡 重点提示：${notices.length ? notices.join('；') : '无'}`

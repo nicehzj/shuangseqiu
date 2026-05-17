@@ -82,6 +82,7 @@ export const PRIZE_LEVEL_LABELS = {
   fifth: '五等奖',
   grand: '特等奖',
   jackpot: '大乐透特等奖',
+  prizeTax: '中奖税',
   redistributionDeduct: '劫富济贫扣除',
   redistributionGrant: '劫富济贫增加'
 };
@@ -91,7 +92,8 @@ export const FUNDING_SOURCE_LABELS = {
   accountBalance: '账户扣款入池',
   insufficientBalance: '账户余额不足',
   maxBetsExceeded: '超过三注限制',
-  redistribution: '劫富济贫'
+  redistribution: '劫富济贫',
+  prizeTax: '中奖税'
 };
 
 export function participantSheetName(nickname) {

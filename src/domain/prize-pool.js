@@ -1,10 +1,10 @@
 import { getRuleSet } from './rules.js';
 
-export function updatePrizePool({ date, issue, openingBalance = 0, betCount, results, playType, incomeOverride = null }) {
+export function updatePrizePool({ date, issue, openingBalance = 0, betCount, results, playType, incomeOverride = null, taxRevenue = 0 }) {
   const ruleSet = getRuleSet(playType);
   const income = incomeOverride ?? betCount * ruleSet.poolIncomePerBet;
   const payout = results.reduce((sum, result) => sum + Number(result.prizeAmount || 0), 0);
-  const rollover = 0;
+  const rollover = Number(taxRevenue || 0);
   const closingBalance = Number(openingBalance) + income + rollover - payout;
   const notes = [];
   const prizeLabels = new Map(ruleSet.prizeLevels.map((level) => [level.id, level.label]));
@@ -14,6 +14,9 @@ export function updatePrizePool({ date, issue, openingBalance = 0, betCount, res
     if (!hasWinner && (handling === 'rollover' || handling === 'returnToPool')) {
       notes.push(`${prizeLabels.get(levelId) ?? levelId} 无人中奖，奖金进入总奖池`);
     }
+  }
+  if (rollover > 0) {
+    notes.push(`中奖税 ${rollover} Hao币回流奖池`);
   }
 
   const abnormal = [];

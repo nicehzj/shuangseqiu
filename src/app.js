@@ -14,6 +14,7 @@ import { formatBallNumber, formatBallNumbers } from './domain/rules.js';
 import { applyBetFunding, deriveAccountBalances } from './domain/accounting.js';
 import { calculateOpeningBalance, parsePoolAdjustment } from './domain/pool-adjustment.js';
 import { buildRedistributionCandidates, runRedistribution } from './domain/redistribution.js';
+import { buildPrizeTaxRecords, calculatePrizeTax } from './domain/prize-tax.js';
 
 const elements = {
   workbookFile: document.querySelector('#workbookFile'),
@@ -189,6 +190,7 @@ function generate() {
   const invalidRecords = fundedRecords.filter((record) => !record.valid);
   const income = fundedRecords.reduce((sum, record) => sum + Number(record.contribution || 0), 0);
   const results = calculateResults(validRecords, winningNumbers, playType, { openingBalance, income });
+  const taxSummary = calculatePrizeTax(results);
   const poolRecord = updatePrizePool({
     date,
     issue,
@@ -196,7 +198,8 @@ function generate() {
     betCount: fundedRecords.length,
     results,
     playType,
-    incomeOverride: income
+    incomeOverride: income,
+    taxRevenue: taxSummary.totalTax
   });
 
   if (!poolRecord.valid) {
@@ -222,13 +225,19 @@ function generate() {
       fundingSource: record.fundingSource
     };
   });
+  const taxRecords = buildPrizeTaxRecords({
+    taxes: taxSummary.taxes,
+    date,
+    issue,
+    playType
+  });
+  let finalPersonalRecords = [...personalRecords, ...taxRecords];
   let rankings = updateRankings({
     existingPersonalRecords: state.history.personalRecords,
-    todaysPersonalRecords: personalRecords,
+    todaysPersonalRecords: finalPersonalRecords,
     date
   });
   let redistribution = null;
-  let finalPersonalRecords = personalRecords;
   if (
     state.duplicateDecision !== 'skip' &&
     window.confirm(
@@ -246,7 +255,7 @@ function generate() {
       richPoolSize: redistributionConfig.richPoolSize,
       poorPoolSize: redistributionConfig.poorPoolSize
     });
-    finalPersonalRecords = [...personalRecords, ...redistribution.records];
+    finalPersonalRecords = [...personalRecords, ...taxRecords, ...redistribution.records];
     rankings = updateRankings({
       existingPersonalRecords: state.history.personalRecords,
       todaysPersonalRecords: finalPersonalRecords,
@@ -264,7 +273,8 @@ function generate() {
     poolRecord,
     rankings,
     duplicateDecision: state.duplicateDecision,
-    redistribution
+    redistribution,
+    taxSummary
   });
   const writeResult = writeUpdatedWorkbook(
     state.history,
@@ -281,6 +291,7 @@ function generate() {
     poolRecord,
     rankings,
     redistribution,
+    taxSummary,
     reportText,
     skipped: writeResult.skipped,
     workbook: writeResult.workbook

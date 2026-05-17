@@ -66,6 +66,22 @@ describe('generateBattleReport', () => {
     expect(text).toContain('⚖️ 劫富济贫：\n扣除：\n张三 -1Hao币\n增加：\n李四 +1Hao币');
   });
 
+  it('includes prize tax in notices and pool change', () => {
+    const text = generateBattleReport({
+      ...base,
+      playType: 'ordinary',
+      poolRecord: { income: 2, payout: 66, rollover: 5, closingBalance: 41, notes: [] },
+      taxSummary: {
+        totalTax: 5,
+        taxes: [{ nickname: '张三', totalPrizeAmount: 66, taxAmount: 5 }]
+      }
+    });
+
+    expect(text).toContain('今日奖池变化：+2 +5 -66 Hao币，当前余额 41 Hao币');
+    expect(text).toContain('中奖税回流奖池 5 Hao币');
+    expect(text).toContain('张三 中奖合计 66Hao币，扣税 5Hao币');
+  });
+
   it('sorts winners from first prize to fifth prize', () => {
     const text = generateBattleReport({
       ...base,
