@@ -16,6 +16,24 @@ describe('updateRankings', () => {
     expect(rankings.monthly[0]).toMatchObject({ nickname: '李四', totalPrizeAmount: 25, rankAfter: 1 });
   });
 
+  it('updates best prize level when today has a higher prize', () => {
+    const rankings = updateRankings({
+      date: '2026-05-10',
+      existingPersonalRecords: [
+        { nickname: 'Alice', date: '2026-05-01', prizeAmount: 1, prizeLevel: 'fifth' },
+        { nickname: 'Bob', date: '2026-04-01', prizeAmount: 26, prizeLevel: 'second' }
+      ],
+      todaysPersonalRecords: [
+        { nickname: 'Alice', date: '2026-05-10', prizeAmount: 66, prizeLevel: 'first' },
+        { nickname: 'Bob', date: '2026-05-10', prizeAmount: 1, prizeLevel: 'fifth' }
+      ]
+    });
+
+    expect(rankings.historical.find((item) => item.nickname === 'Alice')).toMatchObject({ bestPrizeLevel: 'first' });
+    expect(rankings.monthly.find((item) => item.nickname === 'Alice')).toMatchObject({ bestPrizeLevel: 'first' });
+    expect(rankings.historical.find((item) => item.nickname === 'Bob')).toMatchObject({ bestPrizeLevel: 'second' });
+  });
+
   it('applies redistribution amounts without counting them as wins', () => {
     const rankings = updateRankings({
       date: '2026-05-10',

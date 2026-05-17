@@ -1,7 +1,7 @@
 import { validateBallSet } from '../domain/rules.js';
 
-const SEPARATOR_PATTERN = /[\s,，|]+/u;
-const DASH_SEPARATOR_PATTERN = /\s+-\s+/u;
+const NUMBER_PATTERN = /(?<!\d)\d{1,2}(?!\d)/gu;
+const DASH_PATTERN = /[-－–—]/u;
 const LEADING_INDEX_PATTERN = /^\s*\d+\s+/u;
 const TRAILING_GROUP_NICKNAME_PATTERN = /(?:（[^（）]*）|\([^()]*\))\s*$/u;
 
@@ -71,10 +71,18 @@ export function parseBettingText(text) {
 
 function parseBettingLine(line) {
   const normalizedLine = stripLeadingIndex(line);
-  if (DASH_SEPARATOR_PATTERN.test(normalizedLine)) {
-    return parseDashedBettingLine(normalizedLine);
+  const numberTokens = findNumberTokens(normalizedLine);
+  const nickname = extractNickname(normalizedLine, numberTokens[0]);
+
+  if (!nickname) {
+    return invalidLine('缺少昵称', '请把昵称放在每行开头');
   }
-  return parseSequentialBettingLine(normalizedLine);
+
+  if (hasDashBetweenRedAndBlue(normalizedLine, numberTokens)) {
+    return parseDashedBettingLine(nickname, numberTokens);
+  }
+
+  return parseSequentialBettingLine(nickname, numberTokens);
 }
 
 function stripLeadingIndex(line) {
@@ -82,85 +90,81 @@ function stripLeadingIndex(line) {
 }
 
 function normalizeNickname(value) {
-  return String(value ?? '').trim().replace(TRAILING_GROUP_NICKNAME_PATTERN, '').trim();
+  const nickname = String(value ?? '')
+    .trim()
+    .replace(/[|,，\s]+$/u, '')
+    .replace(TRAILING_GROUP_NICKNAME_PATTERN, '')
+    .trim();
+  const mojibakeParenIndex = nickname.lastIndexOf('锛堝');
+  return mojibakeParenIndex >= 0 ? nickname.slice(0, mojibakeParenIndex).trim() : nickname;
 }
 
-function parseSequentialBettingLine(line) {
-  const parts = line.split(SEPARATOR_PATTERN).filter(Boolean);
-  if (parts.length < 8) {
-    if (!parts[0]) {
-      return invalidLine('投注行必须包含昵称、6 个红球和 1 个蓝球', '示例：张三 01 02 03 04 05 06 - 07');
-    }
-    return invalidBet(parts[0], [], 0, ['号码数量缺失']);
+function findNumberTokens(line) {
+  return [...line.matchAll(NUMBER_PATTERN)].map((match) => ({
+    raw: match[0],
+    value: Number(match[0]),
+    index: match.index,
+    end: match.index + match[0].length
+  }));
+}
+
+function extractNickname(line, firstNumberToken) {
+  if (!firstNumberToken) {
+    return '';
+  }
+  return normalizeNickname(line.slice(0, firstNumberToken.index));
+}
+
+function parseSequentialBettingLine(nickname, numberTokens) {
+  if (numberTokens.length < 7) {
+    return invalidBet(nickname, tokenValues(numberTokens), 0, ['号码数量缺失']);
   }
 
-  const nickname = normalizeNickname(parts[0]);
-  if (!nickname) {
-    return invalidLine('缺少昵称', '请把昵称放在每行开头');
-  }
-
-  const numberTokens = parts.slice(1);
   if (numberTokens.length !== 7) {
-    const parsed = parseNumberTokens(numberTokens);
-    return invalidBet(nickname, parsed.values ?? [], parsed.values?.[6] ?? 0, [`号码数量错误，识别到 ${numberTokens.length} 个号码`]);
+    return invalidBet(nickname, tokenValues(numberTokens), numberTokens[6]?.value ?? 0, [`号码数量错误，识别到 ${numberTokens.length} 个号码`]);
   }
 
-  const numbers = parseNumberTokens(numberTokens);
+  const numbers = tokenValues(numberTokens);
 
   return {
     parsed: true,
     nickname,
-    redBalls: numbers.values.slice(0, 6),
-    blueBall: numbers.values[6],
-    invalidReasons: numbers.parsed ? [] : [numbers.reason]
+    redBalls: numbers.slice(0, 6),
+    blueBall: numbers[6],
+    invalidReasons: []
   };
 }
 
-function parseDashedBettingLine(line) {
-  const [left, right, ...rest] = line.split(DASH_SEPARATOR_PATTERN);
-  if (rest.length > 0 || !left || !right) {
-    return invalidLine('短横线格式错误', '示例：张三 01 02 03 04 05 06 - 07');
+function parseDashedBettingLine(nickname, numberTokens) {
+  if (numberTokens.length < 7) {
+    return invalidBet(nickname, tokenValues(numberTokens), 0, ['号码数量缺失']);
   }
 
-  const leftParts = left.split(SEPARATOR_PATTERN).filter(Boolean);
-  if (leftParts.length < 2) {
-    return invalidLine('短横线前必须包含昵称和红球号码', '示例：张三 01 02 03 04 05 06 - 07');
-  }
-
-  const nickname = normalizeNickname(leftParts[0]);
-  if (!nickname) {
-    return invalidLine('缺少昵称', '请把昵称放在每行开头');
-  }
-
-  const redTokens = leftParts.slice(1);
-  const blueTokens = right.split(SEPARATOR_PATTERN).filter(Boolean);
-  if (redTokens.length !== 6 || blueTokens.length < 1) {
-    const redNumbers = parseNumberTokens(redTokens);
-    const blueNumbers = parseNumberTokens(blueTokens);
-    return invalidBet(nickname, redNumbers.values ?? [], blueNumbers.values?.[0] ?? 0, ['号码数量缺失']);
-  }
-
-  const redNumbers = parseNumberTokens(redTokens);
-  const blueNumbers = parseNumberTokens(blueTokens);
+  const redNumbers = tokenValues(numberTokens.slice(0, 6));
+  const blueNumbers = tokenValues(numberTokens.slice(6));
 
   return {
     parsed: true,
     nickname,
-    bets: blueNumbers.values.map((blueBall) => ({
+    bets: blueNumbers.map((blueBall) => ({
       nickname,
-      redBalls: redNumbers.values,
+      redBalls: redNumbers,
       blueBall,
-      invalidReasons: [redNumbers, blueNumbers].filter((item) => !item.parsed).map((item) => item.reason)
+      invalidReasons: []
     }))
   };
 }
 
-function parseNumberTokens(tokens) {
-  const values = tokens.map((token) => Number(token));
-  if (values.some((value) => !Number.isInteger(value))) {
-    return { parsed: false, values, reason: '号码必须是整数', suggestion: '请移除非数字内容' };
+function hasDashBetweenRedAndBlue(line, numberTokens) {
+  if (numberTokens.length < 7) {
+    return DASH_PATTERN.test(line);
   }
-  return { parsed: true, values };
+  const betweenSixthAndSeventh = line.slice(numberTokens[5].end, numberTokens[6].index);
+  return DASH_PATTERN.test(betweenSixthAndSeventh);
+}
+
+function tokenValues(tokens) {
+  return tokens.map((token) => token.value);
 }
 
 function invalidLine(reason, suggestion) {

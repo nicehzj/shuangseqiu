@@ -44,6 +44,53 @@ describe('parseBettingText', () => {
     expect(result.records[1]).toMatchObject({ nickname: '李四', blueBall: 8 });
   });
 
+  it('parses pasted chat lines when numbers touch names or dashes', () => {
+    const result = parseBettingText([
+      '张三 01 02 03 04 05 06 | 07',
+      '李四，01，03，04，05，07，09，02',
+      '王五01 02 03 04 05 06 - 07',
+      '1 张三 01 02 03 04 05 06-07',
+      '2 张三（帅哥） 01 02 03 04 05 06- 07',
+      '3 李四(hero) 01 02 03 04 05 06 -08'
+    ].join('\n'));
+
+    expect(result.errors).toEqual([]);
+    expect(result.records).toHaveLength(6);
+    expect(result.records).toMatchObject([
+      { nickname: '张三', redBalls: [1, 2, 3, 4, 5, 6], blueBall: 7 },
+      { nickname: '李四', redBalls: [1, 3, 4, 5, 7, 9], blueBall: 2 },
+      { nickname: '王五', redBalls: [1, 2, 3, 4, 5, 6], blueBall: 7 },
+      { nickname: '张三', redBalls: [1, 2, 3, 4, 5, 6], blueBall: 7 },
+      { nickname: '张三', redBalls: [1, 2, 3, 4, 5, 6], blueBall: 7 },
+      { nickname: '李四', redBalls: [1, 2, 3, 4, 5, 6], blueBall: 8 }
+    ]);
+  });
+
+  it('parses nicknames with emoji and non Chinese or English characters', () => {
+    const result = parseBettingText([
+      '😀张三 01 02 03 04 05 06 | 07',
+      '张三🔥 01 02 03 04 05 06-07',
+      '@小明 01 02 03 04 05 06 -08',
+      '山田太郎 01 02 03 04 05 06 07',
+      '김철수 01 02 03 04 05 06 07',
+      'A_B-测试 01 02 03 04 05 06 07',
+      '用户123 01 02 03 04 05 06 07',
+      '张三✨（帅哥） 01 02 03 04 05 06 - 07'
+    ].join('\n'));
+
+    expect(result.errors).toEqual([]);
+    expect(result.records).toMatchObject([
+      { nickname: '😀张三', blueBall: 7 },
+      { nickname: '张三🔥', blueBall: 7 },
+      { nickname: '@小明', blueBall: 8 },
+      { nickname: '山田太郎', blueBall: 7 },
+      { nickname: '김철수', blueBall: 7 },
+      { nickname: 'A_B-测试', blueBall: 7 },
+      { nickname: '用户123', blueBall: 7 },
+      { nickname: '张三✨', blueBall: 7 }
+    ]);
+  });
+
   it('reports empty text', () => {
     const result = parseBettingText('   ');
 

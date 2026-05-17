@@ -1,4 +1,15 @@
 const REDISTRIBUTION_LEVELS = new Set(['redistributionDeduct', 'redistributionGrant']);
+const PRIZE_LEVEL_RANK = new Map([
+  ['jackpot', 0],
+  ['grand', 1],
+  ['first', 2],
+  ['second', 3],
+  ['third', 4],
+  ['fourth', 5],
+  ['fifth', 6],
+  ['none', 7],
+  ['invalid', 8]
+]);
 
 function buildRanking(records, scope, period) {
   const byName = new Map();
@@ -14,14 +25,14 @@ function buildRanking(records, scope, period) {
       nickname: record.nickname,
       winCount: 0,
       totalPrizeAmount: 0,
-      bestPrizeLevel: REDISTRIBUTION_LEVELS.has(record.prizeLevel) ? 'none' : record.prizeLevel,
+      bestPrizeLevel: 'none',
       rankBefore: null,
       rankAfter: null,
       change: 0
     };
     if (amount > 0 && !REDISTRIBUTION_LEVELS.has(record.prizeLevel)) {
       current.winCount += 1;
-      current.bestPrizeLevel = current.bestPrizeLevel === 'none' ? record.prizeLevel : current.bestPrizeLevel;
+      current.bestPrizeLevel = betterPrizeLevel(current.bestPrizeLevel, record.prizeLevel);
     }
     current.totalPrizeAmount += amount;
     byName.set(record.nickname, current);
@@ -30,6 +41,12 @@ function buildRanking(records, scope, period) {
   return [...byName.values()]
     .sort((a, b) => b.totalPrizeAmount - a.totalPrizeAmount || b.winCount - a.winCount || a.nickname.localeCompare(b.nickname))
     .map((record, index) => ({ ...record, rankAfter: index + 1 }));
+}
+
+function betterPrizeLevel(currentLevel, nextLevel) {
+  const currentRank = PRIZE_LEVEL_RANK.get(currentLevel) ?? Number.MAX_SAFE_INTEGER;
+  const nextRank = PRIZE_LEVEL_RANK.get(nextLevel) ?? Number.MAX_SAFE_INTEGER;
+  return nextRank < currentRank ? nextLevel : currentLevel;
 }
 
 function rankMap(rankings) {
