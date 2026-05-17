@@ -21,6 +21,8 @@ const elements = {
   issue: document.querySelector('#issue'),
   playType: document.querySelector('#playType'),
   poolAdjustment: document.querySelector('#poolAdjustment'),
+  redistributionRichPoolSize: document.querySelector('#redistributionRichPoolSize'),
+  redistributionPoorPoolSize: document.querySelector('#redistributionPoorPoolSize'),
   redBalls: document.querySelector('#redBalls'),
   blueBall: document.querySelector('#blueBall'),
   randomNumbersButton: document.querySelector('#randomNumbersButton'),
@@ -141,6 +143,13 @@ function generate() {
   if (!poolAdjustment.valid) {
     messages.push(poolAdjustment.error);
   }
+  const redistributionConfig = parseRedistributionConfig(
+    elements.redistributionRichPoolSize.value,
+    elements.redistributionPoorPoolSize.value
+  );
+  if (!redistributionConfig.valid) {
+    messages.push(...redistributionConfig.errors);
+  }
   const winningRedBalls = parseNumberInput(elements.redBalls.value);
   const winningBlueBall = Number(elements.blueBall.value);
   const winningValidation = validateWinningNumbers(winningRedBalls, winningBlueBall);
@@ -220,17 +229,22 @@ function generate() {
   });
   let redistribution = null;
   let finalPersonalRecords = personalRecords;
-  if (state.duplicateDecision !== 'skip' && window.confirm('是否启用“劫富济贫”？确认后将从更新后的总榜前20名随机抽取10人各扣除1Hao币，再从后30名随机抽取10人各增加1Hao币。')) {
+  if (
+    state.duplicateDecision !== 'skip' &&
+    window.confirm(
+      `是否启用“劫富济贫”？确认后将只在今日投注活动用户中，按更新后的总榜排名从前${redistributionConfig.richPoolSize}名随机抽取最多10人各扣除1Hao币，再从后${redistributionConfig.poorPoolSize}名随机抽取最多10人各增加1Hao币。`
+    )
+  ) {
     redistribution = runRedistribution({
       rankings: rankings.historical,
       candidateNames: buildRedistributionCandidates({
-        rankings: rankings.historical,
-        historyRecords: state.history.personalRecords,
         todaysRecords: fundedRecords
       }),
       date,
       issue,
-      playType
+      playType,
+      richPoolSize: redistributionConfig.richPoolSize,
+      poorPoolSize: redistributionConfig.poorPoolSize
     });
     finalPersonalRecords = [...personalRecords, ...redistribution.records];
     rankings = updateRankings({
@@ -282,6 +296,34 @@ function parseNumberInput(value) {
     .split(/[\s,，|]+/u)
     .filter(Boolean)
     .map(Number);
+}
+
+function parseRedistributionConfig(richPoolSizeValue, poorPoolSizeValue) {
+  const richPoolSize = parsePositiveInteger(richPoolSizeValue, 20);
+  const poorPoolSize = parsePositiveInteger(poorPoolSizeValue, 30);
+  const errors = [];
+
+  if (!richPoolSize) {
+    errors.push('劫富济贫扣款候选名次必须是正整数');
+  }
+  if (!poorPoolSize) {
+    errors.push('劫富济贫增款候选名次必须是正整数');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    richPoolSize,
+    poorPoolSize
+  };
+}
+
+function parsePositiveInteger(value, defaultValue) {
+  if (String(value ?? '').trim() === '') {
+    return defaultValue;
+  }
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : null;
 }
 
 function syncIssueFromDate() {

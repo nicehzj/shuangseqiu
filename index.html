@@ -47,6 +47,20 @@
             <input id="poolAdjustment" type="number" step="0.01" placeholder="为空则按 0 处理" />
           </label>
 
+          <div class="redistribution-config">
+            <div class="section-title">劫富济贫当日活动用户候选范围</div>
+            <div class="grid-two">
+              <label>
+                前多少名扣款
+                <input id="redistributionRichPoolSize" type="number" min="1" step="1" value="20" />
+              </label>
+              <label>
+                后多少名增款
+                <input id="redistributionPoorPoolSize" type="number" min="1" step="1" value="30" />
+              </label>
+            </div>
+          </div>
+
           <div class="grid-two">
             <label>
               红球开奖号码

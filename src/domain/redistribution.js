@@ -3,12 +3,21 @@ const RICH_POOL_SIZE = 20;
 const POOR_POOL_SIZE = 30;
 const DRAW_COUNT = 10;
 
-export function runRedistribution({ rankings = [], candidateNames = [], date, issue, playType, random = secureRandom }) {
+export function runRedistribution({
+  rankings = [],
+  candidateNames = [],
+  date,
+  issue,
+  playType,
+  richPoolSize = RICH_POOL_SIZE,
+  poorPoolSize = POOR_POOL_SIZE,
+  random = secureRandom
+}) {
   const completeRankings = completeRanking(rankings, candidateNames);
-  const richCandidates = completeRankings.slice(0, RICH_POOL_SIZE);
+  const richCandidates = completeRankings.slice(0, richPoolSize);
   const selectedRich = sample(richCandidates, DRAW_COUNT, random);
   const selectedRichNames = new Set(selectedRich.map((item) => item.nickname));
-  const poorCandidates = completeRankings.slice(-POOR_POOL_SIZE).filter((item) => !selectedRichNames.has(item.nickname));
+  const poorCandidates = completeRankings.slice(-poorPoolSize).filter((item) => !selectedRichNames.has(item.nickname));
   const selectedPoor = sample(poorCandidates, DRAW_COUNT, random);
 
   const deductions = selectedRich.map((item) => ({
@@ -31,12 +40,8 @@ export function runRedistribution({ rankings = [], candidateNames = [], date, is
   };
 }
 
-export function buildRedistributionCandidates({ rankings = [], historyRecords = [], todaysRecords = [] }) {
-  return uniqueNames([
-    ...rankings.map((item) => item.nickname),
-    ...historyRecords.map((item) => item.nickname),
-    ...todaysRecords.map((item) => item.nickname)
-  ]);
+export function buildRedistributionCandidates({ todaysRecords = [] }) {
+  return uniqueNames(todaysRecords.map((item) => item.nickname));
 }
 
 export function formatRedistributionReport(redistribution) {
@@ -80,8 +85,11 @@ function sample(items, count, random) {
 
 function completeRanking(rankings, candidateNames) {
   const byName = new Map();
+  const candidateSet = new Set(candidateNames ?? []);
+  const shouldFilterToCandidates = candidateSet.size > 0;
+
   for (const item of rankings ?? []) {
-    if (!item.nickname) {
+    if (!item.nickname || (shouldFilterToCandidates && !candidateSet.has(item.nickname))) {
       continue;
     }
     byName.set(item.nickname, {

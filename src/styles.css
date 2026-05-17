@@ -71,6 +71,17 @@ label {
   font-weight: 600;
 }
 
+.section-title {
+  margin-bottom: 8px;
+  color: #4c6a5f;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.redistribution-config {
+  margin-bottom: 14px;
+}
+
 input,
 select,
 textarea {
